@@ -657,10 +657,12 @@ public class IpssDclf extends BaseDSL {
 
   				double outBanchPreFlow = cont.getOutageBranch().getBranch().getDclfFlow()*baseMva;		
   				for (AclfBranch branch : net.getBranchList()) {
+  					if(branch.isActive()){
   					double 	preFlow = branch.getDclfFlow()*baseMva,
   							LODF = monitorBranch(branch).lineOutageDFactor(),
   							postFlow = preFlow + LODF * outBanchPreFlow;
   					resultProcessor.accept(branch, postFlow);
+  					}
   				}
   			} catch (ReferenceBusException | PSSLException e) {
   				ipssLogger.severe(e.toString());
@@ -669,6 +671,29 @@ public class IpssDclf extends BaseDSL {
   			return true;
   		} 
 
+  		public boolean contingencyAanlysisTest(Contingency cont, BiConsumer<AclfBranch, Double> resultProcessor) {
+  			AclfNetwork net = getAclfNetwork();
+  			double baseMva = net.getBaseMva();
+
+  			try {
+  				outageBranch(cont.getOutageBranch().getBranch());
+  				double [] lodfs = this.lineOutageDFactors();
+
+  				double outBanchPreFlow = cont.getOutageBranch().getBranch().getDclfFlow()*baseMva;
+  				for (AclfBranch branch : net.getBranchList()) {
+  					if(branch.isActive()){
+  					double 	preFlow = branch.getDclfFlow()*baseMva,
+  							postFlow = preFlow + lodfs[branch.getSortNumber()]* outBanchPreFlow;
+  					resultProcessor.accept(branch, postFlow);
+  					}
+  				}
+  			} catch (ReferenceBusException | PSSLException e) {
+  				ipssLogger.severe(e.toString());
+  				return false;
+  			}
+  			return true;
+  		} 
+  		
   		/**
   		 * perform multi-outage contingency analysis
   		 * 
@@ -688,23 +713,28 @@ public class IpssDclf extends BaseDSL {
   	  			
   	  			calLineOutageDFactors(cont.getId());
 
-  	  			for (AclfBranch branch : net.getBranchList()) {
-  	  				double preFlow = branch.getDclfFlow()*baseMva,
-  	  						postFlow = 0.0;
+				for (AclfBranch branch : net.getBranchList()) {
+					if (branch.isActive()) {
+						double preFlow = branch.getDclfFlow() * baseMva, postFlow = 0.0;
 
-  	  				double[] factors = monitorBranch(branch)
-  	  				  					  .getLineOutageDFactors();
-  	  				if (factors != null) {  // factors = null if branch is an outage branch
-  	  					double sum = 0.0;
-  	  					int cnt = 0;
-  	  					for (OutageBranch outBranch : outageBranchList()) {
-  	  						double flow = outBranch.getBranch().getDclfFlow();
-  	  						sum += flow * factors[cnt++];
-  	  					}
-  	  					postFlow = sum*baseMva + preFlow;
-  	  				}
-
+						double[] factors = monitorBranch(branch).getLineOutageDFactors();
+						if (factors != null){
+						int size = factors.length;
+						if (size > 0) { // size = 0 if branch is an outage branch
+							double sum = 0.0;
+							int cnt = 0;
+							for (OutageBranch outBranch : outageBranchList()) {
+								if (outBranch.getBranch().getSortNumber() >= 0) {
+									double flow = outBranch.getBranch().getDclfFlow();
+									sum += flow * factors[outBranch.getBranch().getSortNumber()];
+								}
+							}
+							postFlow = sum * baseMva + preFlow;
+						}
+						}
+  	  				
   	  				resultProcessor.accept(branch, postFlow);
+  	  				}
   	  			}
   			} catch (InterpssException | ReferenceBusException | IpssNumericException | OutageConnectivityException e) {
   				ipssLogger.severe(e.toString());
@@ -797,6 +827,10 @@ public class IpssDclf extends BaseDSL {
   			}
   		}
 
+  		public double[] lineOutageDFactors() throws ReferenceBusException {
+  	  			return algo.lineOutageDFactors(this.outageBranch.getBranch());	
+  			
+  		}
   		/**
   		 * for the outage branch, find the branch with largest LODF
   		 * 
