@@ -656,7 +656,7 @@ public class IpssDclf extends BaseDSL {
   				AclfBranch outageBranch = cont.getOutageBranch().getBranch();
   				double[] LODFs = this.algo.lineOutageDFactors(outageBranch);
 
-  				double outBanchPreFlow = cont.getOutageBranch().getBranch().getDclfFlow()*baseMva;		
+  				double outBanchPreFlow = outageBranch.getDclfFlow()*baseMva;		
   				for (AclfBranch branch : net.getBranchList()) {
   					if(branch.isActive()){
   					double 	preFlow = branch.getDclfFlow()*baseMva,

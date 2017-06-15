@@ -39,7 +39,6 @@ import org.ieee.odm.adapter.bpa.BPAAdapter;
 import org.ieee.odm.adapter.ge.GePslfAdapter;
 import org.ieee.odm.adapter.ieeecdf.IeeeCDFAdapter;
 import org.ieee.odm.adapter.psse.PSSEAdapter;
-import org.ieee.odm.adapter.psse.parser.dynamic.tur_gov.PSSETurGovGASTParser;
 import org.ieee.odm.adapter.psse.v26.PSSEV26Adapter;
 import org.ieee.odm.adapter.pwd.PowerWorldAdapter;
 import org.ieee.odm.adapter.ucte.UCTE_DEFAdapter;
@@ -103,6 +102,14 @@ public class IpssAdapter extends BaseDSL {
 			PSSE_26 };
 			
 	/**
+	 *  PSASP version number 
+	 *
+	 */
+	public static enum PSASPVersion {
+		V7_0, V6_x, V5_x, V4_x};
+		
+
+	/**
 	 * create an ImportAclfNetDSL object
 	 * 		
 	 * @param filename custom filename
@@ -149,6 +156,8 @@ public class IpssAdapter extends BaseDSL {
 		private PsseVersion psseVersion;
 		private ODMAclfNetMapper.XfrBranchModel xfrBranchModel = ODMAclfNetMapper.XfrBranchModel.InterPSS;
 		
+		//PSASP save active bus only
+		private boolean saveActiveBusOnly;
 		/**
 		 * full class name for custom ODM file adapter implementation
 		 */
@@ -407,7 +416,7 @@ public class IpssAdapter extends BaseDSL {
 						adapter = (IODMAdapter)constructor.newInstance();
 					}
 					else if ( this.format == FileFormat.PSASP ) {
-						adapter = new PSASPODMAdapter(file1Name, Version.V6_x);
+						adapter = new PSASPODMAdapter(file1Name, Version.V6_x, isSaveActiveBusOnly());
 					}
 				} catch (Exception e) {
 					psslMsg.sendErrorMsg("Cannot load adapter: " + e.toString());
@@ -563,6 +572,15 @@ public class IpssAdapter extends BaseDSL {
 				}
 			
 			return null;
+		}
+		
+		public boolean isSaveActiveBusOnly() {
+			return saveActiveBusOnly;
+		}
+
+		public FileImportDSL setSaveActiveBusOnly(boolean saveActiveBusOnly) {
+			this.saveActiveBusOnly = saveActiveBusOnly;
+			return this;
 		}
 	}
 }
